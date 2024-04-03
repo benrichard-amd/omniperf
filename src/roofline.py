@@ -118,6 +118,7 @@ class Roofline:
         console_debug(msg)
 
         # Generate a roofline figure for each data type
+        i32_fig = self.generate_plot(dtype="I32")
         fp32_fig = self.generate_plot(dtype="FP32")
         fp16_fig = self.generate_plot(dtype="FP16")
         ml_combo_fig = self.generate_plot(
@@ -157,6 +158,10 @@ class Roofline:
                 self.__run_parameters["workload_dir"]
                 + "/empirRoof_gpu-{}_int8_fp16.pdf".format(dev_id)
             )
+            i32_fig.write_image(
+                self.__run_parameters["workload_dir"]
+                + "/empirRoof_gpu-{}_i32.pdf".format(dev_id)
+            )
             # only save a legend if kernel_names option is toggled
             if self.__run_parameters["include_kernel_names"]:
                 self.__figure.write_image(
@@ -171,6 +176,10 @@ class Roofline:
             ml_combo_fig.write_image(
                 self.__run_parameters["workload_dir"]
                 + "/empirRoof_gpu-{}_int8_fp16.pdf".format(dev_id)
+            )
+            i32_fig.write_image(
+                self.__run_parameters["workload_dir"]
+                + "/empirRoof_gpu-{}_i32.pdf".format(dev_id)
             )
             if self.__run_parameters["include_kernel_names"]:
                 self.__figure.write_image(
@@ -200,6 +209,15 @@ class Roofline:
                                         children="Empirical Roofline Analysis (FP16/INT8)"
                                     ),
                                     dcc.Graph(figure=ml_combo_fig),
+                                ],
+                            ),
+                            html.Div(
+                                className="float-child",
+                                children=[
+                                    html.H3(
+                                        children="Empirical Roofline Analysis (INT32)"
+                                    ),
+                                    dcc.Graph(figure=i32_fig),
                                 ],
                             ),
                         ],
@@ -253,7 +271,7 @@ class Roofline:
             )
 
         # Plot peak VALU ceiling
-        if dtype != "FP16" and dtype != "I8":
+        if dtype == "FP32" or dtype == "I32":
             fig.add_trace(
                 go.Scatter(
                     x=self.__ceiling_data["valu"][0],
@@ -279,25 +297,26 @@ class Roofline:
             pos = "bottom left"
         else:
             pos = "top left"
-        # Plot peak MFMA ceiling
-        fig.add_trace(
-            go.Scatter(
-                x=self.__ceiling_data["mfma"][0],
-                y=self.__ceiling_data["mfma"][1],
-                name="Peak MFMA-{}".format(dtype),
-                mode=plot_mode,
-                hovertemplate="<b>%{text}</b>",
-                text=[
-                    (
-                        None
-                        if self.__run_parameters["is_standalone"]
-                        else "{} GFLOP/s".format(to_int(self.__ceiling_data["mfma"][2]))
-                    ),
-                    "{} GFLOP/s".format(to_int(self.__ceiling_data["mfma"][2])),
-                ],
-                textposition=pos,
+        # Plot peak MFMA ceiling (No MFMA for INT32)
+        if dtype != "I32":
+            fig.add_trace(
+                go.Scatter(
+                    x=self.__ceiling_data["mfma"][0],
+                    y=self.__ceiling_data["mfma"][1],
+                    name="Peak MFMA-{}".format(dtype),
+                    mode=plot_mode,
+                    hovertemplate="<b>%{text}</b>",
+                    text=[
+                        (
+                            None
+                            if self.__run_parameters["is_standalone"]
+                            else "{} GFLOP/s".format(to_int(self.__ceiling_data["mfma"][2]))
+                        ),
+                        "{} GFLOP/s".format(to_int(self.__ceiling_data["mfma"][2])),
+                    ],
+                    textposition=pos,
+                )
             )
-        )
         #######################
         # Plot Application AI
         #######################

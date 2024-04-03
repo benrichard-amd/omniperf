@@ -109,8 +109,12 @@ def calc_ceilings(roofline_parameters, dtype, benchmark_data):
     x1_mfma = y1_mfma = x2_mfma = y2_mfma = -1
     target_precision = dtype[2:]
 
-    if dtype != "FP16" and dtype != "I8":
-        peakOps = float(benchmark_data[dtype + "Flops"][roofline_parameters["device_id"]])
+    if dtype == "FP32":
+        peakOps = float(benchmark_data["FP32Flops"][roofline_parameters["device_id"]])
+
+    if dtype == "I32":
+        peakOps = float(benchmark_data["I32OPs"][roofline_parameters["device_id"]])
+
     for i in range(0, len(cacheHierarchy)):
         # Plot BW line
         console_debug("roofline" "Current cache level is %s" % cacheHierarchy[i])
@@ -121,17 +125,19 @@ def calc_ceilings(roofline_parameters, dtype, benchmark_data):
             peakMFMA = float(
                 benchmark_data["MFMAI8Ops"][roofline_parameters["device_id"]]
             )
-        else:
+        elif dtype == "FP16" or dtype == "FP32":
             peakMFMA = float(
                 benchmark_data["MFMAF{}Flops".format(target_precision)][
                     roofline_parameters["device_id"]
                 ]
             )
+        else:
+            peakMFMA = -1
 
         x1 = float(XMIN)
         y1 = float(XMIN) * peakBw
         # Note: No reg peakOps for FP16 or INT8
-        if dtype != "FP16" and dtype != "I8":
+        if dtype == "FP32" or dtype == "I32":
             x2 = peakOps / peakBw
             y2 = peakOps
 
@@ -147,15 +153,20 @@ def calc_ceilings(roofline_parameters, dtype, benchmark_data):
         console_debug("x = [{}, {}]".format(x1, x2_mfma))
         console_debug("y = [{}, {}]".format(y1, y2_mfma))
 
-        graphPoints[cacheHierarchy[i].lower()].append([x1, x2_mfma])
-        graphPoints[cacheHierarchy[i].lower()].append([y1, y2_mfma])
-        graphPoints[cacheHierarchy[i].lower()].append(peakBw)
+        if dtype != "I32":
+            graphPoints[cacheHierarchy[i].lower()].append([x1, x2_mfma])
+            graphPoints[cacheHierarchy[i].lower()].append([y1, y2_mfma])
+            graphPoints[cacheHierarchy[i].lower()].append(peakBw)
+        else: 
+            graphPoints[cacheHierarchy[i].lower()].append([x1, x2])
+            graphPoints[cacheHierarchy[i].lower()].append([y1, y2])
+            graphPoints[cacheHierarchy[i].lower()].append(peakBw)
 
     # -------------------------------------------------------------------------------------
     #                                     Plot computing roof
     # -------------------------------------------------------------------------------------
     # Note: No FMA roof for FP16 or INT8
-    if dtype != "FP16" and dtype != "I8":
+    if dtype == "FP32" or dtype == "I32":
         # Plot FMA roof
         x0 = XMAX
         if x2 < x0:
@@ -168,7 +179,7 @@ def calc_ceilings(roofline_parameters, dtype, benchmark_data):
 
     # Plot MFMA roof
     if (
-        x1_mfma != -1 or dtype == "FP16" or dtype == "I8"
+        dtype == "FP16" or dtype == "I8" or dtype == "FP32"
     ):  # assert that mfma has been assigned
         x0_mfma = XMAX
         if x2_mfma < x0_mfma:
@@ -251,6 +262,8 @@ def calc_ai(sort_type, ret_df):
                 + (df["SQ_INSTS_VALU_MFMA_MOPS_BF16"][idx] * 512)
                 + (df["SQ_INSTS_VALU_MFMA_MOPS_F32"][idx] * 512)
                 + (df["SQ_INSTS_VALU_MFMA_MOPS_F64"][idx] * 512)
+                + 64 * (df["SQ_INSTS_VALU_INT32"][idx])
+                + 64 * (df["SQ_INSTS_VALU_INT64"][idx])
             )
         except KeyError:
             console_debug(
@@ -281,6 +294,8 @@ def calc_ai(sort_type, ret_df):
                     + (2 * df["SQ_INSTS_VALU_FMA_F64"][idx])
                     + df["SQ_INSTS_VALU_TRANS_F64"][idx]
                 )
+                + 64 * (df["SQ_INSTS_VALU_INT32"][idx])
+                + 64 * (df["SQ_INSTS_VALU_INT64"][idx])
             )
         except KeyError:
             console_debug(
