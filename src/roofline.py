@@ -271,7 +271,7 @@ class Roofline:
             )
 
         # Plot peak VALU ceiling
-        if dtype == "FP32" or dtype == "I32":
+        if dtype == "FP32":
             fig.add_trace(
                 go.Scatter(
                     x=self.__ceiling_data["valu"][0],
@@ -288,6 +288,27 @@ class Roofline:
                             )
                         ),
                         "{} GFLOP/s".format(to_int(self.__ceiling_data["valu"][2])),
+                    ],
+                    textposition="top left",
+                )
+            )
+        elif dtype == "I32":
+            fig.add_trace(
+                go.Scatter(
+                    x=self.__ceiling_data["valu"][0],
+                    y=self.__ceiling_data["valu"][1],
+                    name="Peak VALU-{}".format(dtype),
+                    mode=plot_mode,
+                    hovertemplate="<b>%{text}</b>",
+                    text=[
+                        (
+                            None
+                            if self.__run_parameters["is_standalone"]
+                            else "{} GIOP/s".format(
+                                to_int(self.__ceiling_data["valu"][2])
+                            )
+                        ),
+                        "{} GIOP/s".format(to_int(self.__ceiling_data["valu"][2])),
                     ],
                     textposition="top left",
                 )
@@ -360,12 +381,21 @@ class Roofline:
             )
 
         # Set layout
-        fig.update_layout(
-            xaxis_title="Arithmetic Intensity (FLOPs/Byte)",
-            yaxis_title="Performance (GFLOP/sec)",
-            hovermode="x unified",
-            margin=dict(l=50, r=50, b=50, t=50, pad=4),
-        )
+        if dtype == "I32":
+            fig.update_layout(
+                xaxis_title="Arithmetic Intensity (IOPs/Byte)",
+                yaxis_title="Performance (GIOP/sec)",
+                hovermode="x unified",
+                margin=dict(l=50, r=50, b=50, t=50, pad=4),
+            )
+        else:
+            fig.update_layout(
+                xaxis_title="Arithmetic Intensity (FLOPs/Byte)",
+                yaxis_title="Performance (GFLOP/sec)",
+                hovermode="x unified",
+                margin=dict(l=50, r=50, b=50, t=50, pad=4),
+            )
+
         fig.update_xaxes(type="log", autorange=True)
         fig.update_yaxes(type="log", autorange=True)
 
