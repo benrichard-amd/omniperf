@@ -440,60 +440,60 @@ def calc_ai(sort_type, ret_df):
     myList.sort(key=lambda x: x.totalDuration, reverse=True)
 
     # print("Top 5 intensities ('{}')...".format(roof_details["sort"]))
-    intensities = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
-    intensities_int32 = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
-    curr_perf = []
-    curr_perf_int32 = []
+    intensities = {}
+    intensities["fp"] = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
+    intensities["int"] = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
+    curr_perf = {"fp":[], "int":[]}
     kernelNames = []
     i = 0
     # Create list of top 5 intensities
     while i < TOP_N and i != len(myList):
         kernelNames.append(myList[i].KernelName)
         (
-            intensities["ai_l1"].append(myList[i].total_flops / myList[i].L1cache_data)
+            intensities["fp"]["ai_l1"].append(myList[i].total_flops / myList[i].L1cache_data)
             if myList[i].L1cache_data
-            else intensities["ai_l1"].append(0)
+            else intensities["fp"]["ai_l1"].append(0)
         )
         (
-            intensities_int32["ai_l1"].append(myList[i].valu_iops / myList[i].L1cache_data)
+            intensities["int"]["ai_l1"].append(myList[i].valu_iops / myList[i].L1cache_data)
             if myList[i].L1cache_data
-            else intensities_int32["ai_l1"].append(0)
+            else intensities["int"]["ai_l1"].append(0)
         )
         # print("cur_ai_L1", myList[i].total_flops/myList[i].L1cache_data) if myList[i].L1cache_data else print("null")
         # print()
         (
-            intensities["ai_l2"].append(myList[i].total_flops / myList[i].L2cache_data)
+            intensities["fp"]["ai_l2"].append(myList[i].total_flops / myList[i].L2cache_data)
             if myList[i].L2cache_data
-            else intensities["ai_l2"].append(0)
+            else intensities["fp"]["ai_l2"].append(0)
         )
         (
-            intensities_int32["ai_l2"].append(myList[i].valu_iops / myList[i].L2cache_data)
+            intensities["int"]["ai_l2"].append(myList[i].valu_iops / myList[i].L2cache_data)
             if myList[i].L2cache_data
-            else intensities_int32["ai_l2"].append(0)
+            else intensities["int"]["ai_l2"].append(0)
         )
         # print("cur_ai_L2", myList[i].total_flops/myList[i].L2cache_data) if myList[i].L2cache_data else print("null")
         # print()
         (
-            intensities["ai_hbm"].append(myList[i].total_flops / myList[i].hbm_data)
+            intensities["fp"]["ai_hbm"].append(myList[i].total_flops / myList[i].hbm_data)
             if myList[i].hbm_data
-            else intensities["ai_hbm"].append(0)
+            else intensities["fp"]["ai_hbm"].append(0)
         )
         (
-            intensities_int32["ai_hbm"].append(myList[i].valu_iops / myList[i].hbm_data)
+            intensities["int"]["ai_hbm"].append(myList[i].valu_iops / myList[i].hbm_data)
             if myList[i].hbm_data
-            else intensities_int32["ai_hbm"].append(0)
+            else intensities["int"]["ai_hbm"].append(0)
         )
         # print("cur_ai_hbm", myList[i].total_flops/myList[i].hbm_data) if myList[i].hbm_data else print("null")
         # print()
         (
-            curr_perf.append(myList[i].total_flops / myList[i].avgDuration)
+            curr_perf["fp"].append(myList[i].total_flops / myList[i].avgDuration)
             if myList[i].avgDuration
-            else curr_perf.append(0)
+            else curr_perf["fp"].append(0)
         )
         (
-            curr_perf_int32.append(myList[i].valu_iops / myList[i].avgDuration)
+            curr_perf["int"].append(myList[i].valu_iops / myList[i].avgDuration)
             if myList[i].avgDuration
-            else curr_perf_int32.append(0)
+            else curr_perf["int"].append(0)
         )
         # print("cur_perf", myList[i].total_flops/myList[i].avgDuration) if myList[i].avgDuration else print("null")
 
@@ -504,32 +504,20 @@ def calc_ai(sort_type, ret_df):
     intensityPoints["fp"] = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
     intensityPoints["int"] = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
 
-    for i in intensities:
-        values = intensities[i]
+    for k in intensities.keys():
+        for i in intensities[k]:
+            values = intensities[k][i]
 
-        color = get_color(i)
-        x = []
-        y = []
-        for entryIndx in range(0, len(values)):
-            x.append(values[entryIndx])
-            y.append(curr_perf[entryIndx])
+            color = get_color(i)
+            x = []
+            y = []
+            for entryIndx in range(0, len(values)):
+                x.append(values[entryIndx])
+                y.append(curr_perf[k][entryIndx])
 
-        intensityPoints["fp"][i].append(x)
-        intensityPoints["fp"][i].append(y)
-
-    for i in intensities_int32:
-        values = intensities_int32[i]
-
-        color = get_color(i)
-        x = []
-        y = []
-        for entryIndx in range(0, len(values)):
-            x.append(values[entryIndx])
-            y.append(curr_perf_int32[entryIndx])
-
-        intensityPoints["int"][i].append(x)
-        intensityPoints["int"][i].append(y)
-
+            intensityPoints[k][i].append(x)
+            intensityPoints[k][i].append(y)
+    
     # Add an entry for kernel names
     intensityPoints["kernelNames"] = kernelNames
 
