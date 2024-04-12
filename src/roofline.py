@@ -342,43 +342,83 @@ class Roofline:
         # Plot Application AI
         #######################
         if dtype != "I8":
-            # Plot the arithmetic intensity points for each cache level
-            fig.add_trace(
-                go.Scatter(
-                    x=self.__ai_data["ai_l1"][0],
-                    y=self.__ai_data["ai_l1"][1],
-                    name="ai_l1",
-                    mode="markers",
-                    marker={"color": "#00CC96"},
-                    marker_symbol=(
-                        SYMBOLS if self.__run_parameters["include_kernel_names"] else None
-                    ),
+
+            if dtype != "I32":
+                # Plot the arithmetic intensity points for each cache level
+                fig.add_trace(
+                    go.Scatter(
+                        x=self.__ai_data["fp"]["ai_l1"][0],
+                        y=self.__ai_data["fp"]["ai_l1"][1],
+                        name="ai_l1",
+                        mode="markers",
+                        marker={"color": "#00CC96"},
+                        marker_symbol=(
+                            SYMBOLS if self.__run_parameters["include_kernel_names"] else None
+                        ),
+                    )
                 )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=self.__ai_data["ai_l2"][0],
-                    y=self.__ai_data["ai_l2"][1],
-                    name="ai_l2",
-                    mode="markers",
-                    marker={"color": "#EF553B"},
-                    marker_symbol=(
-                        SYMBOLS if self.__run_parameters["include_kernel_names"] else None
-                    ),
+                fig.add_trace(
+                    go.Scatter(
+                        x=self.__ai_data["fp"]["ai_l2"][0],
+                        y=self.__ai_data["fp"]["ai_l2"][1],
+                        name="ai_l2",
+                        mode="markers",
+                        marker={"color": "#EF553B"},
+                        marker_symbol=(
+                            SYMBOLS if self.__run_parameters["include_kernel_names"] else None
+                        ),
+                    )
                 )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=self.__ai_data["ai_hbm"][0],
-                    y=self.__ai_data["ai_hbm"][1],
-                    name="ai_hbm",
-                    mode="markers",
-                    marker={"color": "#636EFA"},
-                    marker_symbol=(
-                        SYMBOLS if self.__run_parameters["include_kernel_names"] else None
-                    ),
+                fig.add_trace(
+                    go.Scatter(
+                        x=self.__ai_data["fp"]["ai_hbm"][0],
+                        y=self.__ai_data["fp"]["ai_hbm"][1],
+                        name="ai_hbm",
+                        mode="markers",
+                        marker={"color": "#636EFA"},
+                        marker_symbol=(
+                            SYMBOLS if self.__run_parameters["include_kernel_names"] else None
+                        ),
+                    )
                 )
-            )
+            else:
+                # Plot the arithmetic intensity points for each cache level
+                fig.add_trace(
+                    go.Scatter(
+                        x=self.__ai_data["int"]["ai_l1"][0],
+                        y=self.__ai_data["int"]["ai_l1"][1],
+                        name="ai_l1",
+                        mode="markers",
+                        marker={"color": "#00CC96"},
+                        marker_symbol=(
+                            SYMBOLS if self.__run_parameters["include_kernel_names"] else None
+                        ),
+                    )
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=self.__ai_data["int"]["ai_l2"][0],
+                        y=self.__ai_data["int"]["ai_l2"][1],
+                        name="ai_l2",
+                        mode="markers",
+                        marker={"color": "#EF553B"},
+                        marker_symbol=(
+                            SYMBOLS if self.__run_parameters["include_kernel_names"] else None
+                        ),
+                    )
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=self.__ai_data["int"]["ai_hbm"][0],
+                        y=self.__ai_data["int"]["ai_hbm"][1],
+                        name="ai_hbm",
+                        mode="markers",
+                        marker={"color": "#636EFA"},
+                        marker_symbol=(
+                            SYMBOLS if self.__run_parameters["include_kernel_names"] else None
+                        ),
+                    )
+                )
 
         # Set layout
         if dtype == "I32":

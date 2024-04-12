@@ -58,6 +58,7 @@ class AI_Data:
 
     total_flops: float
     valu_flops: float
+    valu_iops: float
     mfma_flops_f16: float
     mfma_flops_bf16: float
     mfma_flops_f32: float
@@ -206,7 +207,7 @@ def calc_ai(sort_type, ret_df):
     df = df.sort_values(by=["Kernel_Name"])
     df = df.reset_index(drop=True)
 
-    total_flops = valu_flops = mfma_flops_bf16 = mfma_flops_f16 = mfma_iops_i8 = (
+    total_flops = valu_flops = value_iops = mfma_flops_bf16 = mfma_flops_f16 = mfma_iops_i8 = (
         mfma_flops_f32
     ) = mfma_flops_f64 = lds_data = L1cache_data = L2cache_data = hbm_data = calls = (
         totalDuration
@@ -262,8 +263,6 @@ def calc_ai(sort_type, ret_df):
                 + (df["SQ_INSTS_VALU_MFMA_MOPS_BF16"][idx] * 512)
                 + (df["SQ_INSTS_VALU_MFMA_MOPS_F32"][idx] * 512)
                 + (df["SQ_INSTS_VALU_MFMA_MOPS_F64"][idx] * 512)
-                + 64 * (df["SQ_INSTS_VALU_INT32"][idx])
-                + 64 * (df["SQ_INSTS_VALU_INT64"][idx])
             )
         except KeyError:
             console_debug(
@@ -271,6 +270,16 @@ def calc_ai(sort_type, ret_df):
                 "{}: Skipped total_flops at index {}".format(kernelName[:35], idx),
             )
             pass
+        
+        try:
+            valu_iops = 64 * (df["SQ_INSTS_VALU_INT32"][idx]) + 64 * (df["SQ_INSTS_VALU_INT64"][idx])
+        except KeyError:
+            console_debug(
+                "roofline",
+                "{}: Skipped total_flops at index {}".format(kernelName[:35], idx),
+            )
+            pass
+
         try:
             valu_flops += (
                 64
@@ -294,8 +303,6 @@ def calc_ai(sort_type, ret_df):
                     + (2 * df["SQ_INSTS_VALU_FMA_F64"][idx])
                     + df["SQ_INSTS_VALU_TRANS_F64"][idx]
                 )
-                + 64 * (df["SQ_INSTS_VALU_INT32"][idx])
-                + 64 * (df["SQ_INSTS_VALU_INT64"][idx])
             )
         except KeyError:
             console_debug(
@@ -378,6 +385,7 @@ def calc_ai(sort_type, ret_df):
                     calls,
                     total_flops / calls,
                     valu_flops / calls,
+                    valu_iops / calls,
                     mfma_flops_f16 / calls,
                     mfma_flops_bf16 / calls,
                     mfma_flops_f32 / calls,
@@ -396,7 +404,7 @@ def calc_ai(sort_type, ret_df):
                     kernelName, idx, calls
                 )
             )
-            total_flops = valu_flops = mfma_flops_bf16 = mfma_flops_f16 = mfma_iops_i8 = (
+            total_flops = valu_flops = valu_iops = mfma_flops_bf16 = mfma_flops_f16 = mfma_iops_i8 = (
                 mfma_flops_f32
             ) = mfma_flops_f64 = lds_data = L1cache_data = L2cache_data = hbm_data = (
                 calls
@@ -409,6 +417,7 @@ def calc_ai(sort_type, ret_df):
                     calls,
                     total_flops,
                     valu_flops,
+                    valu_iops,
                     mfma_flops_f16,
                     mfma_flops_bf16,
                     mfma_flops_f32,
@@ -432,7 +441,9 @@ def calc_ai(sort_type, ret_df):
 
     # print("Top 5 intensities ('{}')...".format(roof_details["sort"]))
     intensities = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
+    intensities_int32 = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
     curr_perf = []
+    curr_perf_int32 = []
     kernelNames = []
     i = 0
     # Create list of top 5 intensities
@@ -443,12 +454,22 @@ def calc_ai(sort_type, ret_df):
             if myList[i].L1cache_data
             else intensities["ai_l1"].append(0)
         )
+        (
+            intensities_int32["ai_l1"].append(myList[i].valu_iops / myList[i].L1cache_data)
+            if myList[i].L1cache_data
+            else intensities_int32["ai_l1"].append(0)
+        )
         # print("cur_ai_L1", myList[i].total_flops/myList[i].L1cache_data) if myList[i].L1cache_data else print("null")
         # print()
         (
             intensities["ai_l2"].append(myList[i].total_flops / myList[i].L2cache_data)
             if myList[i].L2cache_data
             else intensities["ai_l2"].append(0)
+        )
+        (
+            intensities_int32["ai_l2"].append(myList[i].valu_iops / myList[i].L2cache_data)
+            if myList[i].L2cache_data
+            else intensities_int32["ai_l2"].append(0)
         )
         # print("cur_ai_L2", myList[i].total_flops/myList[i].L2cache_data) if myList[i].L2cache_data else print("null")
         # print()
@@ -457,6 +478,11 @@ def calc_ai(sort_type, ret_df):
             if myList[i].hbm_data
             else intensities["ai_hbm"].append(0)
         )
+        (
+            intensities_int32["ai_hbm"].append(myList[i].valu_iops / myList[i].hbm_data)
+            if myList[i].hbm_data
+            else intensities_int32["ai_hbm"].append(0)
+        )
         # print("cur_ai_hbm", myList[i].total_flops/myList[i].hbm_data) if myList[i].hbm_data else print("null")
         # print()
         (
@@ -464,11 +490,19 @@ def calc_ai(sort_type, ret_df):
             if myList[i].avgDuration
             else curr_perf.append(0)
         )
+        (
+            curr_perf_int32.append(myList[i].valu_iops / myList[i].avgDuration)
+            if myList[i].avgDuration
+            else curr_perf_int32.append(0)
+        )
         # print("cur_perf", myList[i].total_flops/myList[i].avgDuration) if myList[i].avgDuration else print("null")
 
         i += 1
 
-    intensityPoints = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
+    intensityPoints = {}
+
+    intensityPoints["fp"] = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
+    intensityPoints["int"] = {"ai_l1": [], "ai_l2": [], "ai_hbm": []}
 
     for i in intensities:
         values = intensities[i]
@@ -480,8 +514,21 @@ def calc_ai(sort_type, ret_df):
             x.append(values[entryIndx])
             y.append(curr_perf[entryIndx])
 
-        intensityPoints[i].append(x)
-        intensityPoints[i].append(y)
+        intensityPoints["fp"][i].append(x)
+        intensityPoints["fp"][i].append(y)
+
+    for i in intensities_int32:
+        values = intensities_int32[i]
+
+        color = get_color(i)
+        x = []
+        y = []
+        for entryIndx in range(0, len(values)):
+            x.append(values[entryIndx])
+            y.append(curr_perf_int32[entryIndx])
+
+        intensityPoints["int"][i].append(x)
+        intensityPoints["int"][i].append(y)
 
     # Add an entry for kernel names
     intensityPoints["kernelNames"] = kernelNames
