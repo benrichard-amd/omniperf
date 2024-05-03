@@ -251,6 +251,18 @@ class Roofline:
                 )
             )
 
+        # Finding the highest AI value
+        ai_max = max(self.__ai_data["ai_l1"][0]
+                     + self.__ai_data["ai_l2"][0]
+                     + self.__ai_data["ai_hbm"][0]
+                     )
+
+        # Adjust ceiling so it extends across the chart
+        if dtype != "FP16" and dtype != "I8":
+            self.__ceiling_data["valu"][0][1] = max(self.__ceiling_data["valu"][0][1], ai_max)
+        
+        self.__ceiling_data["mfma"][0][1] = max(self.__ceiling_data["mfma"][0][1], ai_max)
+
         # Plot peak VALU ceiling
         # VALU info I8/FP16 not collected via microbench
         if dtype != "FP16" and dtype != "I8":
